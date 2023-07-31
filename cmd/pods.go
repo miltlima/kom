@@ -46,7 +46,7 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Namespace", "Pod", "Container", "CPU Usage %", "Memory Usage %"})
+	table.SetHeader([]string{"Namespace", "Pod", "Pod IP", "Container", "CPU Usage %", "Memory Usage %"})
 
 	for _, pod := range pods.Items {
 		podName := pod.Name
@@ -69,11 +69,12 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 				cpuUsage := container.Usage.Cpu().MilliValue() / 10
 				coloredCPU := getColorValue(int(cpuUsage))
 
-				// memoryUsage := container.Usage.Memory().Value() / (1024 * 1024)
 				memoryUsage := float64(container.Usage.Memory().Value()) / float64(node.Status.Capacity.Memory().Value()) * 100.0
 				coloredMemory := getColorValue(int(memoryUsage))
 
-				row := []string{podNamespace, podName, container.Name, coloredCPU, coloredMemory}
+				podIP := pod.Status.PodIP
+
+				row := []string{podNamespace, podName, podIP, container.Name, coloredCPU, coloredMemory}
 				table.Append(row)
 
 			}
