@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"kom/kube"
 	"os"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -45,7 +46,7 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Node", "CPU Usage %", "Memory Usage %"})
+	table.SetHeader([]string{"Node", "CPU Usage %", "Memory Usage %", "IP"})
 
 	for _, node := range nodes.Items {
 		nodeName := node.Name
@@ -58,13 +59,17 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 		cpuUsage := metrics.Usage.Cpu().MilliValue() / 10
 		coloredCPU := getColorValue(int(cpuUsage))
 
-		// memoryUsage := metrics.Usage.Memory().Value() / (1024 * 1024)
 		memoryUsage := float64(metrics.Usage.Memory().Value()) / float64(node.Status.Capacity.Memory().Value()) * 100.0
 		coloredMemory := getColorValue(int(memoryUsage))
 
-		// row := []string{nodeName, fmt.Sprintf("%d", coloredCPU), fmt.Sprintf("%d", coloredMemory)}
-		row := []string{nodeName, coloredCPU, coloredMemory}
+		var nodeIPs []string
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP || address.Type == corev1.NodeExternalIP {
+				nodeIPs = append(nodeIPs, address.Address)
+			}
+		}
 
+		row := []string{nodeName, coloredCPU, coloredMemory, strings.Join(nodeIPs, ", ")}
 		table.Append(row)
 
 	}
