@@ -46,39 +46,38 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Namespace", "Pod", "Pod IP", "Container", "CPU Usage %", "Memory Usage %"})
+	table.SetHeader([]string{"Node", "Namespace", "Pod", "Pod IP", "CPU Usage %", "Memory Usage %"})
 
 	for _, pod := range pods.Items {
 		podName := pod.Name
 		podNamespace := pod.Namespace
-		podMetricsList, err := metricsClientset.MetricsV1beta1().PodMetricses(podNamespace).List(context.Background(), metav1.ListOptions{})
+		podIP := pod.Status.PodIP
+		nodeName := pod.Spec.NodeName
+
+		podMetrics, err := metricsClientset.MetricsV1beta1().PodMetricses(podNamespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			fmt.Printf("Error to get metrics from pod %s%s: %s\n", podNamespace, podName, err)
 			continue
 		}
 
-		nodeName := pod.Spec.NodeName
 		node, err := clientset.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			fmt.Printf("Error to get node %s: %s\n", nodeName, err)
 			continue
 		}
 
-		for _, podMetrics := range podMetricsList.Items {
-			for _, container := range podMetrics.Containers {
-				cpuUsage := container.Usage.Cpu().MilliValue() / 10
-				coloredCPU := getColorValue(int(cpuUsage))
+		cpuUsage := podMetrics.Containers[0].Usage.Cpu().MilliValue() / 10
+		coloredCPU := getColorValue(int(cpuUsage))
 
-				memoryUsage := float64(container.Usage.Memory().Value()) / float64(node.Status.Capacity.Memory().Value()) * 100.0
-				coloredMemory := getColorValue(int(memoryUsage))
+		nodeMemoryCapacity := float64(node.Status.Capacity.Memory().Value())
+		podMemoryUsage := float64(podMetrics.Containers[0].Usage.Memory().Value())
 
-				podIP := pod.Status.PodIP
+		memoryUsage := (podMemoryUsage / nodeMemoryCapacity) * 100.0
+		coloredMemory := getColorValue(int(memoryUsage))
 
-				row := []string{podNamespace, podName, podIP, container.Name, coloredCPU, coloredMemory}
-				table.Append(row)
+		row := []string{nodeName, podNamespace, podName, podIP, coloredCPU, coloredMemory}
+		table.Append(row)
 
-			}
-		}
 	}
 
 	table.Render()
