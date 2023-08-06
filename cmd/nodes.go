@@ -46,7 +46,7 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Node", "CPU Usage %", "Memory Usage %", "IP"})
+	table.SetHeader([]string{"Node", "IP", "CPU Usage %", "Memory Usage %", "h"})
 
 	for _, node := range nodes.Items {
 		nodeName := node.Name
@@ -62,6 +62,8 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 		memoryUsage := float64(metrics.Usage.Memory().Value()) / float64(node.Status.Capacity.Memory().Value()) * 100.0
 		coloredMemory := getColorValue(int(memoryUsage))
 
+		statusEmoji := getEmoji(int(cpuUsage), int(memoryUsage))
+
 		var nodeIPs []string
 		for _, address := range node.Status.Addresses {
 			if address.Type == corev1.NodeInternalIP || address.Type == corev1.NodeExternalIP {
@@ -69,7 +71,7 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		row := []string{nodeName, coloredCPU, coloredMemory, strings.Join(nodeIPs, ", ")}
+		row := []string{nodeName, strings.Join(nodeIPs, ", "), coloredCPU, coloredMemory, statusEmoji}
 		table.Append(row)
 
 	}
