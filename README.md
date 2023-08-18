@@ -1,4 +1,6 @@
-[!["Buy Me A Coffee"](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/miltlima)# KOM - Kubernetes Object Metrics CLI tool
+[!["Buy Me A Coffee"](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/miltlima)
+
+# KOM - Kubernetes Object Metrics CLI tool
 
 Kom is a command-line tool written in Go that allows you to display Kubernetes metrics for nodes and pods. It provides an easy way to monitor resource usage and quickly identify performance issues in your Kubernetes cluster.
 
