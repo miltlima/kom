@@ -46,10 +46,20 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Node", "IP", "CPU Usage %", "Memory Usage %", "h"})
+	table.SetHeader([]string{"Node", "IP", "CPU Usage %", "Memory Usage %", "h", "Status - Labels"})
 
 	for _, node := range nodes.Items {
 		nodeName := node.Name
+		hasLabels := len(node.Labels) > 0
+
+		var hasNOSchedule bool
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.TaintNodeUnschedulable && condition.Status == corev1.ConditionTrue {
+				hasNOSchedule = true
+				break
+			}
+		}
+
 		metrics, err := metricsClientset.MetricsV1beta1().NodeMetricses().Get(context.Background(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			fmt.Printf("Error to get metrics from node %s: %s\n", nodeName, err)
@@ -71,9 +81,30 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		row := []string{nodeName, strings.Join(nodeIPs, ", "), coloredCPU, coloredMemory, statusEmoji}
+		var statusMessage string
+		if hasNOSchedule {
+			statusMessage = "NOSchedule"
+		} else {
+			statusMessage = "OK"
+		}
+
+		if hasLabels {
+			labels := strings.Join(getNodeLabels(node), ", ")
+			statusMessage += ", Has Labels: " + labels
+
+		}
+
+		row := []string{nodeName, strings.Join(nodeIPs, ", "), coloredCPU, coloredMemory, statusEmoji, statusMessage}
 		table.Append(row)
 
 	}
 	table.Render()
+}
+
+func getNodeLabels(node corev1.Node) []string {
+	var labels []string
+	for key, value := range node.Labels {
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
+	}
+	return labels
 }
