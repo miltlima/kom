@@ -39,7 +39,7 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	pods, err = clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	pods, err = clientset.CoreV1().Pods(metav1.NamespaceAll).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		fmt.Println("Error to list pods", err)
 		os.Exit(1)
@@ -47,6 +47,8 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Node", "Namespace", "Pod", "Pod IP", "CPU Usage %", "Memory Usage %", "h"})
+
+	errorPods := make(map[string]map[string]string)
 
 	for _, pod := range pods.Items {
 		podName := pod.Name
@@ -56,7 +58,12 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 
 		podMetrics, err := metricsClientset.MetricsV1beta1().PodMetricses(podNamespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
-			fmt.Printf("Error to get metrics from pod %s%s: %s\n", podNamespace, podName, err)
+			errorInfo := map[string]string{
+				"Namespace": pod.Namespace,
+				"Node":      nodeName,
+				"Status":    string(pod.Status.Phase),
+			}
+			errorPods[podName] = errorInfo
 			continue
 		}
 
@@ -84,4 +91,14 @@ func showPodMetrics(cmd *cobra.Command, args []string) {
 
 	table.Render()
 
+	if len(errorPods) > 0 {
+		fmt.Println("Pay Attention in these pods:")
+		errorTable := tablewriter.NewWriter(os.Stdout)
+		errorTable.SetHeader([]string{"Node", "Namespace", "Pod Name", "Status", "H"})
+		for podName, errorInfo := range errorPods {
+			errorTable.Append([]string{errorInfo["Node"], errorInfo["Namespace"], podName, errorInfo["Status"], "🔻"})
+		}
+		errorTable.Render()
+
+	}
 }
