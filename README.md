@@ -80,14 +80,35 @@ This will show a table with information about each node's CPU usage, memory usag
 
 ```bash
 ❯ ./kom nodes
-+-------+-----------+-------------+----------------+----+
-| NODE  |    IP     | CPU USAGE % | MEMORY USAGE % | H  |
-+-------+-----------+-------------+----------------+----+
-| node1 | 10.0.0.11 | 5           | 32             | 🟩 |
-| node2 | 10.0.0.12 | 2           | 25             | 🟩 |
-| node3 | 10.0.0.13 | 0           | 27             | 🟩 |
-| node4 | 10.0.0.14 | 1           | 27             | 🟩 |
-+-------+-----------+-------------+----------------+----+
+
++-------+-----------+-------------+----------------+----+-----------------------------------------------------------+
+| NODE  |    IP     | CPU USAGE % | MEMORY USAGE % | H  |                      STATUS - LABELS                      |
++-------+-----------+-------------+----------------+----+-----------------------------------------------------------+
+| node1 | 10.0.0.11 | 7           | 42             | 🟩 | OK, Has Labels: node-role.kubernetes.io/control-plane=,   |
+|       |           |             |                |    | node.kubernetes.io/exclude-from-external-load-balancers=, |
+|       |           |             |                |    | beta.kubernetes.io/arch=arm64,                            |
+|       |           |             |                |    | beta.kubernetes.io/os=linux, kubernetes.io/arch=arm64,    |
+|       |           |             |                |    | kubernetes.io/hostname=node1, kubernetes.io/os=linux      |
+| node2 | 10.0.0.12 | 2           | 44             | 🟩 | OK, Has Labels:                                           |
+|       |           |             |                |    | kubernetes.io/arch=arm64,                                 |
+|       |           |             |                |    | kubernetes.io/hostname=node2,                             |
+|       |           |             |                |    | kubernetes.io/os=linux,                                   |
+|       |           |             |                |    | beta.kubernetes.io/arch=arm64,                            |
+|       |           |             |                |    | beta.kubernetes.io/os=linux                               |
+| node3 | 10.0.0.13 | 2           | 37             | 🟩 | OK, Has Labels:                                           |
+|       |           |             |                |    | kubernetes.io/os=linux,                                   |
+|       |           |             |                |    | beta.kubernetes.io/arch=arm64,                            |
+|       |           |             |                |    | beta.kubernetes.io/os=linux,                              |
+|       |           |             |                |    | kubernetes.io/arch=arm64,                                 |
+|       |           |             |                |    | kubernetes.io/hostname=node3                              |
+| node4 | 10.0.0.14 | 4           | 36             | 🟩 | OK, Has Labels:                                           |
+|       |           |             |                |    | kubernetes.io/hostname=node4,                             |
+|       |           |             |                |    | kubernetes.io/os=linux,                                   |
+|       |           |             |                |    | beta.kubernetes.io/arch=arm64,                            |
+|       |           |             |                |    | beta.kubernetes.io/os=linux,                              |
+|       |           |             |                |    | kubernetes.io/arch=arm64                                  |
++-------+-----------+-------------+----------------+----+-----------------------------------------------------------+
+
 ```
 
 ## Kom pods
