@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var nodes *corev1.NodeList
@@ -45,12 +46,20 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	kubernetesVersion, err := getKubernetesVersion(clientset)
+	if err != nil {
+		fmt.Printf("Error getting Kubernetes version: %s\n", err)
+		os.Exit(1)
+	}
+
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Node", "IP", "CPU Usage %", "Memory Usage %", "h", "Status - Labels"})
+	table.SetHeader([]string{"Node", "K8s Version", "IP", "Pod Count", "CPU Usage %", "Memory Usage %", "h", "Status", "Labels", "Taints"})
 
 	for _, node := range nodes.Items {
 		nodeName := node.Name
 		hasLabels := len(node.Labels) > 0
+		hasTaints := len(node.Spec.Taints) > 0
+		podCount := getPodCount(node, clientset)
 
 		var hasNOSchedule bool
 		for _, condition := range node.Status.Conditions {
@@ -58,6 +67,13 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 				hasNOSchedule = true
 				break
 			}
+		}
+
+		var taintValue string
+		if hasTaints {
+			taintValue = "Yes"
+		} else {
+			taintValue = "No"
 		}
 
 		metrics, err := metricsClientset.MetricsV1beta1().NodeMetricses().Get(context.Background(), nodeName, metav1.GetOptions{})
@@ -88,13 +104,26 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 			statusMessage = "OK"
 		}
 
+		var statusLabels string
+
 		if hasLabels {
 			labels := strings.Join(getNodeLabels(node), ", ")
-			statusMessage += ", Has Labels: " + labels
+			statusLabels += labels
 
 		}
 
-		row := []string{nodeName, strings.Join(nodeIPs, ", "), coloredCPU, coloredMemory, statusEmoji, statusMessage}
+		row := []string{
+			nodeName,
+			kubernetesVersion,
+			strings.Join(nodeIPs,
+				", "),
+			fmt.Sprintf("%d", podCount),
+			coloredCPU,
+			coloredMemory,
+			statusEmoji,
+			statusMessage,
+			statusLabels,
+			fmt.Sprintf("%v", taintValue)}
 		table.Append(row)
 
 	}
@@ -107,4 +136,23 @@ func getNodeLabels(node corev1.Node) []string {
 		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
 	}
 	return labels
+}
+
+func getKubernetesVersion(clientset *kubernetes.Clientset) (string, error) {
+	versionInfo, err := clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", err
+	}
+	return versionInfo.GitVersion, nil
+}
+
+func getPodCount(node corev1.Node, clientset *kubernetes.Clientset) int {
+	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+		FieldSelector: "spec.nodeName=" + node.Name,
+	})
+	if err != nil {
+		fmt.Printf("Error getting pods on node %s: %s\n", node.Name, err)
+		return 0
+	}
+	return len(pods.Items)
 }
