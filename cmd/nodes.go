@@ -22,6 +22,32 @@ var NodesCmd = &cobra.Command{
 	Run:   showNodesMetrics,
 }
 
+func getNodeLabels(node corev1.Node) []string {
+	var labels []string
+	for key, value := range node.Labels {
+		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
+	}
+	return labels
+}
+
+func getKubernetesVersion(clientset *kubernetes.Clientset) (string, error) {
+	versionInfo, err := clientset.Discovery().ServerVersion()
+	if err != nil {
+		return "", err
+	}
+	return versionInfo.GitVersion, nil
+}
+
+func getPodCount(node corev1.Node, clientset *kubernetes.Clientset) int {
+	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
+		FieldSelector: "spec.nodeName=" + node.Name,
+	})
+	if err != nil {
+		fmt.Printf("Error getting pods on node %s: %s\n", node.Name, err)
+		return 0
+	}
+	return len(pods.Items)
+}
 func showNodesMetrics(cmd *cobra.Command, args []string) {
 	config, err := kube.GetConfig()
 	if err != nil {
@@ -128,31 +154,4 @@ func showNodesMetrics(cmd *cobra.Command, args []string) {
 
 	}
 	table.Render()
-}
-
-func getNodeLabels(node corev1.Node) []string {
-	var labels []string
-	for key, value := range node.Labels {
-		labels = append(labels, fmt.Sprintf("%s=%s", key, value))
-	}
-	return labels
-}
-
-func getKubernetesVersion(clientset *kubernetes.Clientset) (string, error) {
-	versionInfo, err := clientset.Discovery().ServerVersion()
-	if err != nil {
-		return "", err
-	}
-	return versionInfo.GitVersion, nil
-}
-
-func getPodCount(node corev1.Node, clientset *kubernetes.Clientset) int {
-	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: "spec.nodeName=" + node.Name,
-	})
-	if err != nil {
-		fmt.Printf("Error getting pods on node %s: %s\n", node.Name, err)
-		return 0
-	}
-	return len(pods.Items)
 }
